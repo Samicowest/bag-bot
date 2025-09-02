@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bagging Strategy Bot - BST Trading</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-active {
+            background-color: #4CAF50;
+        }
+
+        .status-inactive {
+            background-color: #f44336;
+        }
+
+        .status-warning {
+            background-color: #ff9800;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .metric {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .log-container {
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close {
+            position: absolute;
+            right: 15px;
+            top: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #aaa;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .alert {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .container {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Bagging Strategy Bot</h1>
+            <p>Automated BST Token Accumulation on MEXC Exchange</p>
+        </div>
+
+        <div class="dashboard">
+            <!-- Bot Status Card -->
+            <div class="card">
+                <h3><span class="status-indicator status-inactive" id="botStatus"></span>Bot Status</h3>
+                <div id="botStatusText">Inactive</div>
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="metric-value" id="totalSessions">0</div>
+                        <div class="metric-label">Total Sessions</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="activeTrades">0</div>
+                        <div class="metric-label">Active Trades</div>
+                    </div>
+                </div>
+                <button class="btn" onclick="toggleBot()" id="toggleBotBtn">Start Bot</button>
+                <button class="btn btn-secondary" onclick="showConfigModal()">Configure</button>
+            </div>
+
+            <!-- Current Session Card -->
+            <div class="card">
+                <h3>📊 Current Session</h3>
+                <div id="sessionInfo">No active session</div>
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="metric-value" id="initialCapitalDisplay">$0</div>
+                        <div class="metric-label">Initial Capital</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="currentCapital">$0</div>
+                        <div class="metric-label">Current Capital</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="accumulatedTokens">0</div>
+                        <div class="metric-label">BST Accumulated</div>
+                    </div>
+                </div>
+                <button class="btn" onclick="showSessionModal()">New Session</button>
+                <button class="btn btn-secondary" onclick="loadSessions()">View All</button>
+            </div>
+
+            <!-- Market Data Card -->
+            <div class="card">
+                <h3>📈 Market Data</h3>
+                <div id="marketData">Loading...</div>
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="metric-value" id="bstPrice">$0.00</div>
+                        <div class="metric-label">BST Price</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="priceChange">0%</div>
+                        <div class="metric-label">24h Change</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="marketSentiment">-</div>
+                        <div class="metric-label">Sentiment</div>
+                    </div>
+                </div>
+                <button class="btn" onclick="refreshMarketData()">Refresh</button>
+                <button class="btn btn-secondary" onclick="analyzeStrategy()">Analyze</button>
+            </div>
+
+            <!-- Account Balances Card -->
+            <div class="card">
+                <h3>💰 Account Balances</h3>
+                <div id="balanceInfo">Loading...</div>
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="metric-value" id="usdtBalance">$0</div>
+                        <div class="metric-label">USDT Balance</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="bstBalance">0</div>
+                        <div class="metric-label">BST Balance</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="totalValue">$0</div>
+                        <div class="metric-label">Total Value</div>
+                    </div>
+                </div>
+                <button class="btn" onclick="refreshBalances()">Refresh</button>
+                <button class="btn btn-secondary" onclick="getRiskAssessment()">Risk Check</button>
+            </div>
+        </div>
+
+        <!-- Activity Log -->
+        <div class="card">
+            <h3>📝 Activity Log</h3>
+            <div class="log-container" id="activityLog">
+                <div>[INFO] Bagging Strategy Bot initialized</div>
+                <div>[INFO] Waiting for configuration...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration Modal -->
+    <div id="configModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('configModal')">&times;</span>
+            <h3>Bot Configuration</h3>
+            <form id="configForm">
+                <div class="form-group">
+                    <label for="configName">Configuration Name:</label>
+                    <input type="text" id="configName" required>
+                </div>
+                <div class="form-group">
+                    <label for="apiKey">MEXC API Key:</label>
+                    <input type="text" id="apiKey" required>
+                </div>
+                <div class="form-group">
+                    <label for="apiSecret">MEXC API Secret:</label>
+                    <input type="password" id="apiSecret" required>
+                </div>
+                <div class="form-group">
+                    <label for="minOrderSize">Minimum Order Size (USDT):</label>
+                    <input type="number" id="minOrderSize" value="10" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label for="maxOrderSize">Maximum Order Size (USDT):</label>
+                    <input type="number" id="maxOrderSize" value="100" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label for="tradingInterval">Trading Interval (minutes):</label>
+                    <input type="number" id="tradingInterval" value="15" min="1">
+                </div>
+                <button type="submit" class="btn">Save Configuration</button>
+                <button type="button" class="btn btn-secondary" onclick="testApiCredentials()">Test API</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Session Modal -->
+    <div id="sessionModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('sessionModal')">&times;</span>
+            <h3>Create New Trading Session</h3>
+            <form id="sessionForm">
+                <div class="form-group">
+                    <label for="sessionName">Session Name:</label>
+                    <input type="text" id="sessionName" required>
+                </div>
+                <div class="form-group">
+                    <label for="initialCapital">Initial Capital (USDT):</label>
+                    <input type="number" id="initialCapital" required step="0.01" min="10"
+                        placeholder="Enter amount (minimum $10)">
+                </div>
+                <div class="form-group">
+                    <label for="cycleDuration">Cycle Duration (days):</label>
+                    <input type="number" id="cycleDuration" value="30" min="1" max="90">
+                </div>
+                <button type="submit" class="btn">Create Session</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let botRunning = false;
+        let currentSession = null;
+        let refreshInterval = null;
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function () {
+            loadDashboard();
+            startAutoRefresh();
+        });
+
+        // Load dashboard data
+        async function loadDashboard() {
+            try {
+                await Promise.all([
+                    loadSessions(),
+                    refreshMarketData(),
+                    refreshBalances()
+                ]);
+                logActivity('[INFO] Dashboard loaded successfully');
+            } catch (error) {
+                logActivity(`[ERROR] Failed to load dashboard: ${error.message}`);
+            }
+        }
+
+        // Load sessions
+        async function loadSessions() {
+            try {
+                const response = await fetch('/api/trading/sessions');
+                const sessions = await response.json();
+
+                const activeSessions = sessions.filter(s => s.status === 'active');
+                document.getElementById('totalSessions').textContent = sessions.length;
+
+                if (activeSessions.length > 0) {
+                    currentSession = activeSessions[0];
+                    updateSessionDisplay(currentSession);
+                } else {
+                    document.getElementById('sessionInfo').textContent = 'No active session';
+                }
+
+            } catch (error) {
+                logActivity(`[ERROR] Failed to load sessions: ${error.message}`);
+            }
+        }
+
+        // Update session display
+        function updateSessionDisplay(session) {
+            document.getElementById('sessionInfo').innerHTML = `
+                <strong>${session.session_name}</strong><br>
+                Status: <span class="status-indicator status-active"></span>${session.status}
+            `;
+            document.getElementById('initialCapitalDisplay').textContent = `$${session.initial_capital.toFixed(2)}`;
+            document.getElementById('currentCapital').textContent = `$${session.current_capital.toFixed(2)}`;
+            document.getElementById('accumulatedTokens').textContent = session.accumulated_tokens.toFixed(4);
+        }
+
+        // Refresh market data
+        async function refreshMarketData() {
+            try {
+                const response = await fetch('/api/trading/market-data');
+                const result = await response.json();
+
+                if (result.success) {
+                    const data = result.market_data;
+                    document.getElementById('bstPrice').textContent = `$${data.current_price.toFixed(4)}`;
+                    document.getElementById('priceChange').textContent = `${data.price_change_percent.toFixed(2)}%`;
+                    document.getElementById('marketSentiment').textContent = data.market_sentiment;
+
+                    // Update price change color
+                    const priceChangeElement = document.getElementById('priceChange');
+                    priceChangeElement.style.color = data.price_change_percent >= 0 ? '#4CAF50' : '#f44336';
+
+                    logActivity(`[INFO] Market data updated: BST $${data.current_price.toFixed(4)} (${data.price_change_percent.toFixed(2)}%)`);
+                }
+            } catch (error) {
+                logActivity(`[ERROR] Failed to refresh market data: ${error.message}`);
+            }
+        }
+
+        // Refresh balances
+        async function refreshBalances() {
+            try {
+                const response = await fetch('/api/trading/balances');
+                const result = await response.json();
+
+                if (result.success) {
+                    const balances = result.balances;
+                    document.getElementById('usdtBalance').textContent = `$${balances.USDT.total.toFixed(2)}`;
+                    document.getElementById('bstBalance').textContent = balances.BST.total.toFixed(4);
+                    document.getElementById('totalValue').textContent = `$${balances.total_value_usdt.toFixed(2)}`;
+
+                    logActivity(`[INFO] Balances updated: USDT $${balances.USDT.total.toFixed(2)}, BST ${balances.BST.total.toFixed(4)}`);
+                }
+            } catch (error) {
+                logActivity(`[ERROR] Failed to refresh balances: ${error.message}`);
+            }
+        }
+
+        // Analyze strategy
+        async function analyzeStrategy() {
+            try {
+                logActivity('[INFO] Analyzing strategy...');
+                const response = await fetch('/api/trading/strategy/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    const analysis = result.analysis;
+                    logActivity(`[STRATEGY] Signal: ${analysis.signal.action} - ${analysis.signal.reason}`);
+
+                    if (analysis.trade_executed) {
+                        logActivity(`[TRADE] Executed: ${analysis.trade_executed.side} ${analysis.trade_executed.quantity} BST`);
+                    }
+                } else {
+                    logActivity(`[ERROR] Strategy analysis failed: ${result.error}`);
+                }
+            } catch (error) {
+                logActivity(`[ERROR] Failed to analyze strategy: ${error.message}`);
+            }
+        }
+
+        // Get risk assessment
+        async function getRiskAssessment() {
+            try {
+                const response = await fetch('/api/trading/risk/assessment');
+                const result = await response.json();
+
+                if (result.success) {
+                    const assessment = result.risk_assessment;
+                    logActivity(`[RISK] Risk Level: ${assessment.metrics.risk_level} (Score: ${assessment.metrics.risk_score.toFixed(1)})`);
+
+                    if (assessment.emergency_stop_required) {
+                        logActivity(`[WARNING] Emergency stop required: ${assessment.emergency_stop_reason}`);
+                        showAlert('Emergency stop required: ' + assessment.emergency_stop_reason, 'error');
+                    }
+
+                    assessment.recommendations.forEach(rec => {
+                        logActivity(`[RECOMMENDATION] ${rec}`);
+                    });
+                } else {
+                    logActivity(`[ERROR] Risk assessment failed: ${result.error}`);
+                }
+            } catch (error) {
+                logActivity(`[ERROR] Failed to get risk assessment: ${error.message}`);
+            }
+        }
+
+        // Show configuration modal
+        function showConfigModal() {
+            document.getElementById('configModal').style.display = 'block';
+        }
+
+        // Show session modal
+        function showSessionModal() {
+            document.getElementById('sessionModal').style.display = 'block';
+        }
+
+        // Close modal
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Handle configuration form
+        document.getElementById('configForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const formData = {
+                config_name: document.getElementById('configName').value,
+                api_key: document.getElementById('apiKey').value,
+                api_secret: document.getElementById('apiSecret').value,
+                min_order_size: parseFloat(document.getElementById('minOrderSize').value),
+                max_order_size: parseFloat(document.getElementById('maxOrderSize').value),
+                trading_interval_minutes: parseInt(document.getElementById('tradingInterval').value)
+            };
+
+            try {
+                const response = await fetch('/api/trading/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showAlert('Configuration saved successfully!', 'success');
+                    closeModal('configModal');
+                    logActivity('[INFO] Configuration saved successfully');
+                } else {
+                    showAlert('Failed to save configuration: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Error saving configuration: ' + error.message, 'error');
+            }
+        });
+
+        // Handle session form
+        document.getElementById('sessionForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            // Validate session name
+            const sessionNameInput = document.getElementById("sessionName");
+            const sessionName = sessionNameInput.value.trim();
+
+            if (!sessionName) {
+                showAlert("Please enter a session name.", "error");
+                sessionNameInput.focus();
+                return;
+            }
+
+            // Validate initial capital input
+            const initialCapitalInput = document.getElementById("initialCapital");
+            let initialCapital = initialCapitalInput.value;
+
+            // Trim whitespace and check if empty
+            if (!initialCapital || initialCapital.trim() === "") {
+                showAlert("Please enter an initial capital amount.", "error");
+                initialCapitalInput.focus();
+                return;
+            }
+
+            // Parse to float and validate
+            initialCapital = parseFloat(initialCapital.trim());
+
+            if (isNaN(initialCapital)) {
+                showAlert("Please enter a valid number for Initial Capital.", "error");
+                initialCapitalInput.focus();
+                return;
+            }
+
+            if (initialCapital <= 0) {
+                showAlert("Initial Capital must be greater than 0.", "error");
+                initialCapitalInput.focus();
+                return;
+            }
+
+            if (initialCapital < 10) {
+                showAlert("Initial Capital must be at least $10 USDT.", "error");
+                initialCapitalInput.focus();
+                return;
+            }
+
+            const formData = {
+                session_name: sessionName,
+                initial_capital: initialCapital,
+                cycle_duration_days: parseInt(document.getElementById("cycleDuration").value)
+            };
+
+            try {
+                const response = await fetch('/api/trading/sessions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showAlert('Session created successfully!', 'success');
+                    closeModal('sessionModal');
+                    loadSessions();
+                    logActivity(`[INFO] New session created: ${formData.session_name}`);
+                } else {
+                    showAlert('Failed to create session: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Error creating session: ' + error.message, 'error');
+            }
+        });
+
+        // Test API credentials
+        async function testApiCredentials() {
+            const apiKey = document.getElementById('apiKey').value;
+            const apiSecret = document.getElementById('apiSecret').value;
+            console.log(apiKey, apiSecret)
+
+            if (!apiKey || !apiSecret) {
+                showAlert('Please enter API key and secret first', 'warning');
+                return;
+            }
+
+            // This would require creating a temporary config first
+            showAlert('API testing feature coming soon', 'warning');
+        }
+
+        // Toggle bot
+        function toggleBot() {
+            botRunning = !botRunning;
+            const btn = document.getElementById('toggleBotBtn');
+            const status = document.getElementById('botStatus');
+            const statusText = document.getElementById('botStatusText');
+
+            if (botRunning) {
+                btn.textContent = 'Stop Bot';
+                btn.className = 'btn btn-danger';
+                status.className = 'status-indicator status-active';
+                statusText.textContent = 'Active';
+                logActivity('[INFO] Bot started');
+            } else {
+                btn.textContent = 'Start Bot';
+                btn.className = 'btn';
+                status.className = 'status-indicator status-inactive';
+                statusText.textContent = 'Inactive';
+                logActivity('[INFO] Bot stopped');
+            }
+        }
+
+        // Start auto refresh
+        function startAutoRefresh() {
+            refreshInterval = setInterval(() => {
+                if (botRunning) {
+                    refreshMarketData();
+                    refreshBalances();
+                }
+            }, 30000); // Refresh every 30 seconds when bot is running
+        }
+
+        // Log activity
+        function logActivity(message) {
+            const log = document.getElementById('activityLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            log.appendChild(logEntry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // Show alert
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+
+            document.body.insertBefore(alertDiv, document.body.firstChild);
+
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+
+        // Close modals when clicking outside
+        window.onclick = function (event) {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>
